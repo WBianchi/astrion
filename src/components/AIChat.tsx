@@ -241,7 +241,7 @@ async function processCoderActions(response: string): Promise<boolean> {
         // Adiciona feedback visual na mensagem
         const currentMessages = useEditorStore.getState().messages;
         const lastMessage = currentMessages[currentMessages.length - 1];
-        if (lastMessage.role === 'assistant') {
+        if (lastMessage && lastMessage.role === 'assistant') {
           let feedback = '';
           switch (action.trim()) {
             case 'create_file':
@@ -278,7 +278,7 @@ async function processCoderActions(response: string): Promise<boolean> {
         // Adiciona erro na mensagem
         const currentMessages = useEditorStore.getState().messages;
         const lastMessage = currentMessages[currentMessages.length - 1];
-        if (lastMessage.role === 'assistant') {
+        if (lastMessage && lastMessage.role === 'assistant') {
           lastMessage.content += `\n\n❌ Erro: ${result?.error}`;
           useEditorStore.setState({ messages: [...currentMessages] });
         }
