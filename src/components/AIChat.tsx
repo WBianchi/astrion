@@ -1069,7 +1069,7 @@ IMPORTANTE:
         <div className="flex items-center gap-2 mb-2">
           <button
             onClick={() => setModelType('chat')}
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors border ${
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs transition-colors border ${
               modelType === 'chat'
                 ? 'bg-purple-600 text-white border-purple-500'
                 : 'text-gray-400 hover:bg-[#2d2d30] border-[#3e3e42]'
@@ -1080,7 +1080,7 @@ IMPORTANTE:
           </button>
           <button
             onClick={() => setModelType('coder')}
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors border ${
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs transition-colors border ${
               modelType === 'coder'
                 ? 'bg-purple-600 text-white border-purple-500'
                 : 'text-gray-400 hover:bg-[#2d2d30] border-[#3e3e42]'
@@ -1091,7 +1091,7 @@ IMPORTANTE:
           </button>
           <button
             onClick={() => setModelType('image')}
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors border ${
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs transition-colors border ${
               modelType === 'image'
                 ? 'bg-purple-600 text-white border-purple-500'
                 : 'text-gray-400 hover:bg-[#2d2d30] border-[#3e3e42]'
@@ -1116,15 +1116,15 @@ IMPORTANTE:
             disabled={isAIThinking}
             style={{ minHeight: '38px', maxHeight: '120px' }}
           />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {/* Indicador MCPs */}
             {connectedServers.length > 0 && (
               <div 
-                className="flex items-center gap-1 px-2 py-1 rounded-md bg-cyan-900/20 border border-cyan-500/30"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-full bg-cyan-900/20 border border-cyan-500/30"
                 title={`${connectedServers.length} MCP(s) conectado(s): ${connectedServers.map(s => s.name).join(', ')}`}
               >
-                <Zap className="w-3 h-3 text-cyan-400" />
-                <span className="text-xs text-cyan-400">{connectedServers.length}</span>
+                <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="text-xs text-cyan-400 font-medium">{connectedServers.length}</span>
               </div>
             )}
             
@@ -1133,7 +1133,7 @@ IMPORTANTE:
               <button
                 onClick={toggleTTS}
                 disabled={isAIThinking}
-                className={`p-1.5 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                className={`p-2 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                   isTTSEnabled 
                     ? 'bg-green-600/20 hover:bg-green-600/30 text-green-400' 
                     : 'hover:bg-[#3e3e42] text-gray-400'
@@ -1148,7 +1148,7 @@ IMPORTANTE:
             <button
               onClick={toggleRecording}
               disabled={isAIThinking}
-              className={`p-1.5 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+              className={`p-2 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                 isRecording 
                   ? 'bg-red-600 hover:bg-red-700 text-white' 
                   : 'hover:bg-[#3e3e42] text-gray-400'
@@ -1162,7 +1162,7 @@ IMPORTANTE:
             {isAIThinking && (
               <button
                 onClick={handleStop}
-                className="p-1.5 rounded-md transition-colors hover:bg-red-900/30 border border-red-500/50"
+                className="p-2 rounded-full transition-colors hover:bg-red-900/30 border border-red-500/50"
                 title="Parar geração (Ctrl+C)"
               >
                 <Square className="w-4 h-4 text-red-500 fill-red-500" />
@@ -1174,7 +1174,7 @@ IMPORTANTE:
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="p-1.5 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#3e3e42]"
+                className="p-2 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#3e3e42]"
               >
                 <Send className="w-4 h-4 text-blue-500" />
               </button>

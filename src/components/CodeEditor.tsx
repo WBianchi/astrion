@@ -1,11 +1,12 @@
 import Editor from '@monaco-editor/react';
 import { useEditorStore } from '../store/editorStore';
-import { X, AlertCircle, XCircle } from 'lucide-react';
+import { X, AlertCircle, XCircle, ChevronDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export function CodeEditor() {
   const { currentFile, openFiles, updateFileContent, setCurrentFile, removeOpenFile, closeAllFiles } = useEditorStore();
   const [fileErrors, setFileErrors] = useState<Record<string, number>>({});
+  const [showMoreTabs, setShowMoreTabs] = useState(false);
 
   const handleEditorChange = (value: string | undefined) => {
     if (currentFile && value !== undefined) {
@@ -83,37 +84,93 @@ export function CodeEditor() {
           )}
           
           {/* Abas */}
-          <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 flex-1">
-            {openFiles.map((file) => (
-            <div
-              key={file.path}
-              onClick={() => setCurrentFile(file)}
-              className={`flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer border-r border-[#3e3e42] hover:bg-[#2a2d2e] transition-colors min-w-0 flex-shrink-0 max-w-[120px] ${
-                currentFile?.path === file.path ? 'bg-[#1e1e1e] text-white' : 'text-gray-400'
-              }`}
-            >
-              <span className="truncate">{file.name}</span>
-              
-              {/* Contador de erros/warnings */}
-              {fileErrors[file.path] > 0 && (
-                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-yellow-900/30 border border-yellow-500/30">
-                  <AlertCircle className="w-3 h-3 text-yellow-500" />
-                  <span className="text-xs text-yellow-500">{fileErrors[file.path]}</span>
-                </div>
-              )}
-              
-              {/* Botão fechar */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeOpenFile(file.path);
-                }}
-                className="hover:bg-[#3e3e42] rounded p-0.5 transition-colors"
+          <div className="flex items-center gap-0.5 flex-1 min-w-0">
+            {/* Tabs visíveis (máximo 8) */}
+            <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 flex-1 min-w-0">
+              {openFiles.slice(0, 8).map((file) => (
+              <div
+                key={file.path}
+                onClick={() => setCurrentFile(file)}
+                className={`flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer border-r border-[#3e3e42] hover:bg-[#2a2d2e] transition-colors min-w-0 flex-shrink-0 max-w-[120px] ${
+                  currentFile?.path === file.path ? 'bg-[#1e1e1e] text-white' : 'text-gray-400'
+                }`}
               >
-                <X className="w-3 h-3" />
-              </button>
+                <span className="truncate">{file.name}</span>
+                
+                {/* Contador de erros/warnings */}
+                {fileErrors[file.path] > 0 && (
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-yellow-900/30 border border-yellow-500/30">
+                    <AlertCircle className="w-3 h-3 text-yellow-500" />
+                    <span className="text-xs text-yellow-500">{fileErrors[file.path]}</span>
+                  </div>
+                )}
+                
+                {/* Botão fechar */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeOpenFile(file.path);
+                  }}
+                  className="hover:bg-[#3e3e42] rounded p-0.5 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
             </div>
-          ))}
+            
+            {/* Indicador de mais tabs com dropdown */}
+            {openFiles.length > 8 && (
+              <div className="relative flex-shrink-0">
+                <button
+                  onClick={() => setShowMoreTabs(!showMoreTabs)}
+                  className="flex items-center gap-1 px-2 py-1.5 text-xs text-gray-400 border-l border-[#3e3e42] bg-[#252526] hover:bg-[#2a2d2e] transition-colors"
+                >
+                  <span className="font-semibold">+{openFiles.length - 8}</span>
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+                
+                {/* Dropdown com tabs ocultas */}
+                {showMoreTabs && (
+                  <>
+                    {/* Backdrop para fechar */}
+                    <div 
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowMoreTabs(false)}
+                    />
+                    
+                    {/* Menu dropdown */}
+                    <div className="absolute top-full right-0 mt-1 bg-[#252526] border border-[#3e3e42] rounded shadow-lg z-20 min-w-[200px] max-h-[400px] overflow-y-auto">
+                      {openFiles.slice(8).map((file) => (
+                        <div
+                          key={file.path}
+                          onClick={() => {
+                            setCurrentFile(file);
+                            setShowMoreTabs(false);
+                          }}
+                          className={`flex items-center justify-between gap-2 px-3 py-2 text-xs cursor-pointer hover:bg-[#2a2d2e] transition-colors ${
+                            currentFile?.path === file.path ? 'bg-[#1e1e1e] text-white' : 'text-gray-400'
+                          }`}
+                        >
+                          <span className="truncate flex-1">{file.name}</span>
+                          
+                          {/* Botão fechar */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeOpenFile(file.path);
+                            }}
+                            className="hover:bg-[#3e3e42] rounded p-0.5 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

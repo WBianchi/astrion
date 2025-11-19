@@ -10,20 +10,36 @@ interface MessageBlockProps {
 export function MessageBlock({ content, isUser, onExecuteCommand }: MessageBlockProps) {
   const [copiedBlocks, setCopiedBlocks] = useState<Set<number>>(new Set());
 
+  // Remove tags ACTION/PATH/CONTENT para melhor UX
+  const cleanContent = (text: string): string => {
+    // Remove tags XML de ações
+    let cleaned = text.replace(/<ACTION>[\s\S]*?<\/ACTION>/g, '');
+    cleaned = cleaned.replace(/<PATH>[\s\S]*?<\/PATH>/g, '');
+    cleaned = cleaned.replace(/<CONTENT>[\s\S]*?<\/CONTENT>/g, '');
+    cleaned = cleaned.replace(/<DIFF>[\s\S]*?<\/DIFF>/g, '');
+    
+    // Remove linhas vazias múltiplas
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+    
+    return cleaned.trim();
+  };
+
   // Detecta blocos de código
   const parseContent = () => {
+    // Limpa o conteúdo antes de processar
+    const cleanedContent = isUser ? content : cleanContent(content);
     const parts: Array<{ type: 'text' | 'code'; content: string; language?: string; index: number }> = [];
     const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
     let lastIndex = 0;
     let match;
     let blockIndex = 0;
 
-    while ((match = codeBlockRegex.exec(content)) !== null) {
+    while ((match = codeBlockRegex.exec(cleanedContent)) !== null) {
       // Adiciona texto antes do bloco de código
       if (match.index > lastIndex) {
         parts.push({
           type: 'text',
-          content: content.substring(lastIndex, match.index),
+          content: cleanedContent.substring(lastIndex, match.index),
           index: blockIndex++
         });
       }
@@ -40,15 +56,15 @@ export function MessageBlock({ content, isUser, onExecuteCommand }: MessageBlock
     }
 
     // Adiciona texto restante
-    if (lastIndex < content.length) {
+    if (lastIndex < cleanedContent.length) {
       parts.push({
         type: 'text',
-        content: content.substring(lastIndex),
+        content: cleanedContent.substring(lastIndex),
         index: blockIndex
       });
     }
 
-    return parts.length > 0 ? parts : [{ type: 'text' as const, content, index: 0 }];
+    return parts.length > 0 ? parts : [{ type: 'text' as const, content: cleanedContent, index: 0 }];
   };
 
   const handleCopy = (text: string, index: number) => {
