@@ -31,4 +31,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   mcpConnect: (serverConfig) => ipcRenderer.invoke('mcp-connect', serverConfig),
   mcpDisconnect: (serverName) => ipcRenderer.invoke('mcp-disconnect', serverName),
   mcpList: () => ipcRenderer.invoke('mcp-list'),
+  mcpCallTool: (serverName, toolName, args) => ipcRenderer.invoke('mcp-call-tool', serverName, toolName, args),
+  mcpListTools: (serverName) => ipcRenderer.invoke('mcp-list-tools', serverName),
+  mcpListResources: (serverName) => ipcRenderer.invoke('mcp-list-resources', serverName),
+  mcpReadResource: (serverName, uri) => ipcRenderer.invoke('mcp-read-resource', serverName, uri),
 });

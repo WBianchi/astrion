@@ -14,9 +14,13 @@ export interface ElectronAPI {
   windowMaximize: () => void;
   windowClose: () => void;
   toggleDevTools: () => void;
-  mcpConnect: (serverConfig: any) => Promise<{ success: boolean; error?: string }>;
+  mcpConnect: (serverConfig: any) => Promise<{ success: boolean; tools?: any[]; error?: string }>;
   mcpDisconnect: (serverName: string) => Promise<{ success: boolean; error?: string }>;
   mcpList: () => Promise<{ success: boolean; servers?: any[]; error?: string }>;
+  mcpCallTool: (serverName: string, toolName: string, args: any) => Promise<{ success: boolean; result?: any; error?: string }>;
+  mcpListTools: (serverName: string) => Promise<{ success: boolean; tools?: any[]; error?: string }>;
+  mcpListResources: (serverName: string) => Promise<{ success: boolean; resources?: any[]; error?: string }>;
+  mcpReadResource: (serverName: string, uri: string) => Promise<{ success: boolean; content?: any; error?: string }>;
 }
 
 declare global {

@@ -4,6 +4,7 @@ import { useEditorStore } from '../store/editorStore';
 import { ollamaService } from '../services/ollama';
 import { executeAITool } from '../services/aiTools';
 import { ttsService } from '../services/tts';
+import { mcpToolsService } from '../services/mcpToolsService';
 import { MessageBlock } from './MessageBlock';
 import { useToast } from './Toast';
 import { CodeStats } from './CodeStats';
@@ -485,6 +486,12 @@ export function AIChat() {
       // Adiciona mensagem de sistema com contexto permanente
       let systemContent = `Você é um assistente de código trabalhando no workspace: ${workspacePath || 'não definido'}. Sempre considere este contexto ao responder.${aiRulesText}`;
       
+      // Adiciona tools dos MCPs ao system prompt
+      const mcpToolsPrompt = mcpToolsService.generateToolsPrompt();
+      if (mcpToolsPrompt) {
+        systemContent += mcpToolsPrompt;
+      }
+      
       // Se estiver no modo coder, adiciona instruções sobre tools
       if (modelType === 'coder') {
         systemContent += `\n\nVocê é um CODER AGENT que pode executar ações automaticamente!
@@ -635,6 +642,41 @@ IMPORTANTE:
         useEditorStore.setState({ messages: [...currentMessages] });
       }
 
+      // Processa tool calls dos MCPs
+      const toolCalls = mcpToolsService.parseToolCalls(aiResponse);
+      if (toolCalls.length > 0) {
+        console.log(`🔧 Detectadas ${toolCalls.length} tool calls`);
+        
+        for (const toolCall of toolCalls) {
+          // Adiciona feedback visual
+          const currentMessages = useEditorStore.getState().messages;
+          const lastMessage = currentMessages[currentMessages.length - 1];
+          if (lastMessage && lastMessage.role === 'assistant') {
+            lastMessage.content += `\n\n🔧 Executando ${toolCall.toolName} no ${toolCall.serverName}...`;
+            useEditorStore.setState({ messages: [...currentMessages] });
+          }
+          
+          // Executa tool
+          const result = await mcpToolsService.executeTool(toolCall);
+          
+          // Atualiza mensagem com resultado
+          const updatedMessages = useEditorStore.getState().messages;
+          const updatedLastMessage = updatedMessages[updatedMessages.length - 1];
+          if (updatedLastMessage && updatedLastMessage.role === 'assistant') {
+            if (result.success) {
+              const resultText = JSON.stringify(result.result, null, 2);
+              updatedLastMessage.content += `\n✅ Resultado:\n\`\`\`json\n${resultText}\n\`\`\``;
+            } else {
+              updatedLastMessage.content += `\n❌ Erro: ${result.error}`;
+            }
+            
+            // Remove tool call tags da mensagem
+            updatedLastMessage.content = mcpToolsService.removeToolCalls(updatedLastMessage.content);
+            useEditorStore.setState({ messages: [...updatedMessages] });
+          }
+        }
+      }
+      
       // Se estiver no modo coder, processa ações
       if (modelType === 'coder') {
         const hasReadFile = await processCoderActions(aiResponse);

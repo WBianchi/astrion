@@ -1,10 +1,22 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const { promisify } = require('util');
 
 const execAsync = promisify(exec);
+
+// Importa SDK MCP (apenas no main process)
+let Client, StdioClientTransport;
+try {
+  const { Client: MCPClient } = require('@modelcontextprotocol/sdk/client/index.js');
+  const { StdioClientTransport: MCPTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
+  Client = MCPClient;
+  StdioClientTransport = MCPTransport;
+  console.log('✅ MCP SDK carregado no main process');
+} catch (error) {
+  console.warn('⚠️ MCP SDK não disponível:', error.message);
+}
 
 let mainWindow;
 
@@ -240,14 +252,52 @@ ipcMain.handle('mcp-connect', async (event, serverConfig) => {
   try {
     console.log('🔌 Conectando ao MCP:', serverConfig.name);
     
-    // Por enquanto, apenas simula conexão
-    // TODO: Implementar conexão real com spawn
-    mcpServers.set(serverConfig.name, {
-      ...serverConfig,
-      status: 'connected'
+    if (!Client || !StdioClientTransport) {
+      throw new Error('MCP SDK não disponível');
+    }
+    
+    // Cria transport com stdio
+    const transport = new StdioClientTransport({
+      command: serverConfig.command,
+      args: serverConfig.args,
     });
     
-    return { success: true };
+    // Cria client MCP
+    const client = new Client(
+      {
+        name: 'astrion-client',
+        version: '1.0.0',
+      },
+      {
+        capabilities: {
+          roots: {
+            listChanged: true,
+          },
+          sampling: {},
+        },
+      }
+    );
+    
+    // Conecta ao servidor
+    await client.connect(transport);
+    
+    // Lista tools disponíveis
+    const toolsResponse = await client.listTools();
+    console.log(`✅ MCP ${serverConfig.name} conectado! Tools:`, toolsResponse.tools?.length || 0);
+    
+    // Armazena servidor conectado
+    mcpServers.set(serverConfig.name, {
+      ...serverConfig,
+      status: 'connected',
+      client,
+      transport,
+      tools: toolsResponse.tools || []
+    });
+    
+    return { 
+      success: true,
+      tools: toolsResponse.tools || []
+    };
   } catch (error) {
     console.error('❌ Erro ao conectar MCP:', error);
     return { success: false, error: error.message };
@@ -258,6 +308,12 @@ ipcMain.handle('mcp-connect', async (event, serverConfig) => {
 ipcMain.handle('mcp-disconnect', async (event, serverName) => {
   try {
     console.log('🔌 Desconectando MCP:', serverName);
+    
+    const server = mcpServers.get(serverName);
+    if (server && server.client) {
+      await server.client.close();
+    }
+    
     mcpServers.delete(serverName);
     return { success: true };
   } catch (error) {
@@ -271,9 +327,84 @@ ipcMain.handle('mcp-list', async () => {
   try {
     return {
       success: true,
-      servers: Array.from(mcpServers.values())
+      servers: Array.from(mcpServers.values()).map(s => ({
+        name: s.name,
+        command: s.command,
+        args: s.args,
+        status: s.status,
+        tools: s.tools || []
+      }))
     };
   } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Chama uma tool de um servidor MCP
+ipcMain.handle('mcp-call-tool', async (event, serverName, toolName, args) => {
+  try {
+    const server = mcpServers.get(serverName);
+    if (!server || !server.client) {
+      throw new Error(`Servidor ${serverName} não conectado`);
+    }
+    
+    console.log(`🔧 Chamando tool ${toolName} no ${serverName}`);
+    const response = await server.client.callTool({
+      name: toolName,
+      arguments: args || {}
+    });
+    
+    return { success: true, result: response };
+  } catch (error) {
+    console.error(`❌ Erro ao chamar tool ${toolName}:`, error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Lista tools de um servidor
+ipcMain.handle('mcp-list-tools', async (event, serverName) => {
+  try {
+    const server = mcpServers.get(serverName);
+    if (!server || !server.client) {
+      throw new Error(`Servidor ${serverName} não conectado`);
+    }
+    
+    const response = await server.client.listTools();
+    return { success: true, tools: response.tools || [] };
+  } catch (error) {
+    console.error(`❌ Erro ao listar tools:`, error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Lista resources de um servidor
+ipcMain.handle('mcp-list-resources', async (event, serverName) => {
+  try {
+    const server = mcpServers.get(serverName);
+    if (!server || !server.client) {
+      throw new Error(`Servidor ${serverName} não conectado`);
+    }
+    
+    const response = await server.client.listResources();
+    return { success: true, resources: response.resources || [] };
+  } catch (error) {
+    console.error(`❌ Erro ao listar resources:`, error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Lê um resource de um servidor
+ipcMain.handle('mcp-read-resource', async (event, serverName, uri) => {
+  try {
+    const server = mcpServers.get(serverName);
+    if (!server || !server.client) {
+      throw new Error(`Servidor ${serverName} não conectado`);
+    }
+    
+    const response = await server.client.readResource({ uri });
+    return { success: true, content: response };
+  } catch (error) {
+    console.error(`❌ Erro ao ler resource:`, error);
     return { success: false, error: error.message };
   }
 });

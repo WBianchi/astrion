@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Server, Circle, RefreshCw, Zap, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Server, Circle, RefreshCw, Zap, AlertCircle } from 'lucide-react';
 import { mcpService, type MCPServer } from '../services/mcpService';
+import { mcpToolsService } from '../services/mcpToolsService';
 import { DEFAULT_MCP_SERVERS, ADVANCED_MCP_SERVERS, MCP_DESCRIPTIONS } from '../config/mcpServers';
 import { useToast } from './Toast';
 
@@ -45,7 +46,11 @@ export function MCPServers() {
       const newServers = [...servers];
       newServers[index].status = 'connected';
       setServers(newServers);
-      showToast(`✅ ${server.name} conectado!`, 'success');
+      
+      // Carrega tools do servidor
+      await mcpToolsService.updateServerTools(server.name);
+      const tools = mcpToolsService.getServerTools(server.name);
+      showToast(`✅ ${server.name} conectado! ${tools.length} tools disponíveis`, 'success');
     } catch (error) {
       const newServers = [...servers];
       newServers[index].status = 'error';
