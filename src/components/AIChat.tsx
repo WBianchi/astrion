@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Bot, Code2, Check, X, Image as ImageIcon, Mic, MicOff, Volume2, VolumeX, Square } from 'lucide-react';
+import { Send, Loader2, Bot, Code2, Check, X, Image as ImageIcon, Mic, MicOff, Volume2, VolumeX, Square, Zap } from 'lucide-react';
 import { useEditorStore } from '../store/editorStore';
 import { ollamaService } from '../services/ollama';
 import { executeAITool } from '../services/aiTools';
@@ -7,6 +7,7 @@ import { ttsService } from '../services/tts';
 import { MessageBlock } from './MessageBlock';
 import { useToast } from './Toast';
 import { CodeStats } from './CodeStats';
+import { useMCP } from '../hooks/useMCP';
 
 interface PendingAction {
   id: string;
@@ -309,6 +310,9 @@ export function AIChat() {
   
   const { showToast, ToastContainer } = useToast();
   
+  // MCPs
+  const { connectedServers, callTool, getAllTools, isServerConnected } = useMCP();
+  
   const { 
     messages, 
     isAIThinking, 
@@ -431,6 +435,12 @@ export function AIChat() {
         useEditorStore.setState({ messages: [...currentMessages] });
       }
     }
+  };
+
+  const toggleTTS = () => {
+    const newState = !isTTSEnabled;
+    setIsTTSEnabled(newState);
+    showToast(newState ? '🔊 TTS ativado' : '🔇 TTS desativado', 'info');
   };
 
   const handleSend = async () => {
@@ -1065,14 +1075,23 @@ IMPORTANTE:
             style={{ minHeight: '38px', maxHeight: '120px' }}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-            {/* Botão TTS (só no modo chat) */}
-            {modelType === 'chat' && (
+            {/* Indicador MCPs */}
+            {connectedServers.length > 0 && (
+              <div 
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-cyan-900/20 border border-cyan-500/30"
+                title={`${connectedServers.length} MCP(s) conectado(s): ${connectedServers.map(s => s.name).join(', ')}`}
+              >
+                <Zap className="w-3 h-3 text-cyan-400" />
+                <span className="text-xs text-cyan-400">{connectedServers.length}</span>
+              </div>
+            )}
+            
+            {/* Botão TTS */}
+            {isTTSEnabled !== undefined && (
               <button
-                onClick={() => {
-                  const newState = ttsService.toggle();
-                  setIsTTSEnabled(newState);
-                }}
-                className={`p-1.5 rounded-md transition-colors ${
+                onClick={toggleTTS}
+                disabled={isAIThinking}
+                className={`p-1.5 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                   isTTSEnabled 
                     ? 'bg-green-600/20 hover:bg-green-600/30 text-green-400' 
                     : 'hover:bg-[#3e3e42] text-gray-400'

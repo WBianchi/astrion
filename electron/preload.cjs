@@ -26,5 +26,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMaximize: () => ipcRenderer.send('window-maximize'),
   windowClose: () => ipcRenderer.send('window-close'),
   toggleDevTools: () => ipcRenderer.send('toggle-devtools'),
-  executeCommand: (command, cwd) => ipcRenderer.invoke('execute-command', command, cwd),
+  
+  // MCP operations
+  mcpConnect: (serverConfig) => ipcRenderer.invoke('mcp-connect', serverConfig),
+  mcpDisconnect: (serverName) => ipcRenderer.invoke('mcp-disconnect', serverName),
+  mcpList: () => ipcRenderer.invoke('mcp-list'),
 });

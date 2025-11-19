@@ -14,11 +14,13 @@
     "electron:build": "pnpm build && electron-builder"
   },
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "@anthropic-ai/sdk": "^0.70.0",
+    "@modelcontextprotocol/sdk": "^1.22.0",
     "@monaco-editor/react": "^4.6.0",
     "axios": "^1.7.2",
     "lucide-react": "^0.460.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "zustand": "^5.0.2"
   },
   "devDependencies": {

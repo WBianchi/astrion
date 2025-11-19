@@ -227,3 +227,53 @@ ipcMain.on('toggle-devtools', () => {
     }
   }
 });
+
+// ============================================
+// MCP Handlers (Model Context Protocol)
+// ============================================
+
+// Armazena servidores MCP conectados
+const mcpServers = new Map();
+
+// Conecta a um servidor MCP
+ipcMain.handle('mcp-connect', async (event, serverConfig) => {
+  try {
+    console.log('🔌 Conectando ao MCP:', serverConfig.name);
+    
+    // Por enquanto, apenas simula conexão
+    // TODO: Implementar conexão real com spawn
+    mcpServers.set(serverConfig.name, {
+      ...serverConfig,
+      status: 'connected'
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Erro ao conectar MCP:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Desconecta de um servidor MCP
+ipcMain.handle('mcp-disconnect', async (event, serverName) => {
+  try {
+    console.log('🔌 Desconectando MCP:', serverName);
+    mcpServers.delete(serverName);
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Erro ao desconectar MCP:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Lista servidores conectados
+ipcMain.handle('mcp-list', async () => {
+  try {
+    return {
+      success: true,
+      servers: Array.from(mcpServers.values())
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});

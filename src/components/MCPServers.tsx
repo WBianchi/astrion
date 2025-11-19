@@ -1,36 +1,90 @@
-import { useState } from 'react';
-import { Server, Circle, Plus, Trash2 } from 'lucide-react';
-
-interface MCPServer {
-  name: string;
-  url: string;
-  status: 'connected' | 'disconnected' | 'error';
-}
+import { useState, useEffect } from 'react';
+import { Server, Circle, RefreshCw, Zap, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { mcpService, type MCPServer } from '../services/mcpService';
+import { DEFAULT_MCP_SERVERS, ADVANCED_MCP_SERVERS, MCP_DESCRIPTIONS } from '../config/mcpServers';
+import { useToast } from './Toast';
 
 export function MCPServers() {
-  const [servers, setServers] = useState<MCPServer[]>([
-    { name: 'Filesystem', url: 'mcp://filesystem', status: 'connected' },
-    { name: 'Memory', url: 'mcp://memory', status: 'connected' },
-    { name: 'Puppeteer', url: 'mcp://puppeteer', status: 'disconnected' },
-  ]);
+  const [servers, setServers] = useState<MCPServer[]>(
+    DEFAULT_MCP_SERVERS.map(s => ({ ...s }))
+  );
+  const [advancedServers, setAdvancedServers] = useState<MCPServer[]>(
+    ADVANCED_MCP_SERVERS.map(s => ({ ...s }))
+  );
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
+  const { showToast, ToastContainer } = useToast();
+  
+  // Detecta se está no Electron
+  const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
 
-  const handleAddServer = () => {
-    const name = prompt('Server name:');
-    const url = prompt('Server URL:');
-    if (name && url) {
-      setServers([...servers, { name, url, status: 'disconnected' }]);
+  // Carrega MCPs salvos e reconecta automaticamente
+  useEffect(() => {
+    const savedServers = mcpService.getConnectedServers();
+    if (savedServers.length > 0) {
+      console.log(`📦 Encontrados ${savedServers.length} MCPs salvos`);
+      setServers(savedServers);
+      
+      // Reconecta automaticamente os que estavam conectados
+      savedServers.forEach((server, index) => {
+        if (server.status === 'connected') {
+          console.log(`🔄 Reconectando ${server.name}...`);
+          handleConnect(index);
+        }
+      });
+    }
+  }, []);
+
+  // Conecta a um servidor MCP
+  const handleConnect = async (index: number) => {
+    const server = servers[index];
+    setLoading(server.name);
+    
+    try {
+      await mcpService.connectServer(server);
+      const newServers = [...servers];
+      newServers[index].status = 'connected';
+      setServers(newServers);
+      showToast(`✅ ${server.name} conectado!`, 'success');
+    } catch (error) {
+      const newServers = [...servers];
+      newServers[index].status = 'error';
+      setServers(newServers);
+      showToast(`❌ Erro ao conectar ${server.name}`, 'error');
+      console.error(error);
+    } finally {
+      setLoading(null);
     }
   };
 
-  const handleRemoveServer = (index: number) => {
-    setServers(servers.filter((_, i) => i !== index));
+  // Desconecta de um servidor MCP
+  const handleDisconnect = async (index: number) => {
+    const server = servers[index];
+    setLoading(server.name);
+    
+    try {
+      await mcpService.disconnectServer(server.name);
+      const newServers = [...servers];
+      newServers[index].status = 'disconnected';
+      setServers(newServers);
+      showToast(`🔌 ${server.name} desconectado`, 'info');
+    } catch (error) {
+      showToast(`❌ Erro ao desconectar ${server.name}`, 'error');
+      console.error(error);
+    } finally {
+      setLoading(null);
+    }
   };
 
-  const toggleServerStatus = (index: number) => {
-    const newServers = [...servers];
-    newServers[index].status = 
-      newServers[index].status === 'connected' ? 'disconnected' : 'connected';
-    setServers(newServers);
+
+  // Toggle conexão
+  const toggleServerStatus = async (index: number) => {
+    const server = servers[index];
+    if (server.status === 'connected') {
+      await handleDisconnect(index);
+    } else {
+      await handleConnect(index);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -43,19 +97,28 @@ export function MCPServers() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#252526] border-r border-[#3e3e42]">
+    <>
+      <ToastContainer />
+      <div className="flex flex-col h-full bg-[#252526] border-r border-[#3e3e42]">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-[#3e3e42]">
         <span className="text-xs font-semibold text-gray-400 uppercase">MCP Servers</span>
-        <button
-          onClick={handleAddServer}
-          className="p-1 hover:bg-[#3e3e42] rounded transition-colors"
-          title="Add Server"
-        >
-          <Plus className="w-4 h-4 text-gray-400" />
-        </button>
+        <span className="text-xs text-gray-500">Click to connect</span>
       </div>
 
+      {/* Aviso se não estiver no Electron */}
+      {!isElectron && (
+        <div className="mx-3 my-2 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-md">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-yellow-200">
+              <p className="font-semibold mb-1">MCPs só funcionam no Electron</p>
+              <p className="text-yellow-300/80">Execute: <code className="bg-black/30 px-1 rounded">pnpm electron:dev</code></p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Servers List */}
       <div className="flex-1 overflow-y-auto">
         {servers.length === 0 ? (
@@ -77,23 +140,29 @@ export function MCPServers() {
                       className={`w-2 h-2 ${getStatusColor(server.status)} fill-current flex-shrink-0`}
                     />
                   </div>
-                  <div className="text-xs text-gray-500 truncate">{server.url}</div>
+                  <div className="text-xs text-gray-500 truncate">
+                    {MCP_DESCRIPTIONS[server.name] || server.command}
+                  </div>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => toggleServerStatus(index)}
-                    className="p-1 hover:bg-[#3e3e42] rounded"
-                    title={server.status === 'connected' ? 'Disconnect' : 'Connect'}
-                  >
-                    <Circle className={`w-3 h-3 ${getStatusColor(server.status)}`} />
-                  </button>
-                  <button
-                    onClick={() => handleRemoveServer(index)}
-                    className="p-1 hover:bg-[#3e3e42] rounded"
-                    title="Remove"
-                  >
-                    <Trash2 className="w-3 h-3 text-red-400" />
-                  </button>
+                  {loading === server.name ? (
+                    <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
+                  ) : (
+                    <button
+                      onClick={() => toggleServerStatus(index)}
+                      className="p-1 hover:bg-[#3e3e42] rounded"
+                      title={server.status === 'connected' ? 'Disconnect' : 'Connect'}
+                      disabled={loading !== null}
+                    >
+                      {server.status === 'connected' ? (
+                        <Zap className="w-3 h-3 text-green-400" />
+                      ) : server.status === 'error' ? (
+                        <AlertCircle className="w-3 h-3 text-red-400" />
+                      ) : (
+                        <Circle className="w-3 h-3 text-gray-400" />
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -106,5 +175,6 @@ export function MCPServers() {
         {servers.filter(s => s.status === 'connected').length} / {servers.length} connected
       </div>
     </div>
+    </>
   );
 }
